@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # Service for the PostgreSQL database.
+  postgresdb:
+    image: postgres:17 # Specifies the official PostgreSQL version 17 image.
+    restart: unless-stopped # Ensures the service restarts automatically unless manually stopped.
+    environment:
+      # Database credentials and name sourced from the .env file.
+      # These are used by PostgreSQL to initialize the database on first run.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Persists database data across container restarts.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Checks if the database is ready to accept connections.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s # How often to run the check.
+      timeout: 5s # How long to wait for a response.
+      retries: 5 # How many times to retry before marking as unhealthy.
+
+  # Service for the n8n workflow automation tool.
+  n8n:
+    image: n8nio/n8n:latest # Specifies the latest official n8n image.
+    restart: unless-stopped # Ensures the service restarts automatically.
+    environment:
+      # Configuration for connecting n8n to the PostgreSQL database.
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgresdb # The hostname of the database service.
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Sets the timezone for the n8n application and the container.
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+      TZ: ${TZ}
+
+      # Security and runner settings for n8n.
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+      N8N_RUNNERS_ENABLED: true
+
+      # Public-facing URL configuration for n8n, used for webhooks and the editor.
+      N8N_HOST: ${N8N_HOST}
+      N8N_PROTOCOL: https
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+    depends_on:
+      postgresdb:
+        # Ensures that n8n only starts after the postgresdb service is healthy.
+        condition: service_healthy
+    volumes:
+      # Persists n8n's user data, workflows, and credentials.
+      - n8ndata:/home/node/.n8n
+
+  # Service for creating a secure tunnel to the n8n service using Cloudflare Tunnel.
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest # Specifies the official Cloudflare Tunnel image.
+    restart: unless-stopped # Ensures the service restarts automatically.
+    profiles: ["tunnel"]
+    # The command to run the tunnel. The token is provided from the .env file.
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+
+# Defines the named volumes used for data persistence.
+volumes:
+  pgdata:
+  n8ndata:
