@@ -47,6 +47,10 @@ services:
       N8N_PROTOCOL: https
       N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
       WEBHOOK_URL: ${WEBHOOK_URL}
+      # The following variable is necessary when n8n is running behind a reverse proxy.
+      # It specifies the number of hops, which is the number of reverse proxies the request
+      # goes through before reaching n8n.
+      N8N_PROXY_HOPS: ${N8N_PROXY_HOPS:-1}
     depends_on:
       postgresdb:
         # Ensures that n8n only starts after the postgresdb service is healthy.

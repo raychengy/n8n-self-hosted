@@ -30,6 +30,9 @@ TZ=America/New_York
 N8N_HOST=your-n8n-subdomain.your-domain.com
 N8N_EDITOR_BASE_URL=https://your-n8n-subdomain.your-domain.com/
 WEBHOOK_URL=https://your-n8n-subdomain.your-domain.com/
+# This specifies the number of reverse proxies n8n is running behind.
+# The default of 1 is correct for this project's Cloudflare Tunnel setup.
+N8N_PROXY_HOPS=1
 
 # Cloudflare Tunnel token
 TUNNEL_TOKEN=your-tunnel-token
@@ -73,6 +76,7 @@ The following environment variables need to be set in the `.env` file:
 | `N8N_HOST`            | The public domain where n8n is accessible (e.g., `n8n.your-domain.com`).                                |
 | `N8N_EDITOR_BASE_URL` | The full base URL for the n8n editor (e.g., `https://n8n.your-domain.com/`).                             |
 | `WEBHOOK_URL`         | The full URL for n8n webhooks (should be the same as `N8N_EDITOR_BASE_URL`).                            |
+| `N8N_PROXY_HOPS`      | The number of reverse proxies n8n is running behind. Defaults to `1`, which is correct for the Cloudflare Tunnel setup in this project. |
 | `TUNNEL_TOKEN`        | Your Cloudflare Tunnel token.                                                                           |
 
 ## Usage
