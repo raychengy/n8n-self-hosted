@@ -63,6 +63,13 @@ services:
       # Specifies the number of reverse proxies between the user and n8n.
       # '1' is correct for the Cloudflare Tunnel setup.
       N8N_PROXY_HOPS: ${N8N_PROXY_HOPS:-1}
+    healthcheck:
+      # Checks if the n8n main application is ready to accept connections.
+      test: ["CMD-SHELL", "curl -f http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     ports:
       # Exposes n8n on port 5678 for local access.
       # This is disabled when using the tunnel override file.
@@ -95,5 +102,6 @@ services:
       # (e.g., javascript, python) and their allowed packages.
       - ./n8n-task-runners.json:/etc/n8n-task-runners.json
     depends_on:
-      # Ensures the runner only starts after the main n8n instance is running.
-      - n8n
+      # Ensures the runner only starts after the main n8n service is healthy.
+      n8n:
+        condition: service_healthy
