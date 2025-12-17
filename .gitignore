@@ -1,2 +1,6 @@
 # Ignore environment variables file
 .env
+
+# Ignore docker volumes
+n8ndata/
+pgdata/
