@@ -5,7 +5,7 @@
 services:
   # Service for the PostgreSQL database.
   postgresdb:
-    image: postgres:18
+    image: postgres:18.1-bookworm
     restart: unless-stopped
     environment:
       # Database credentials and name sourced from the .env file.
@@ -25,7 +25,7 @@ services:
 
   # Service for the main n8n application.
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.1.0
     restart: unless-stopped
     environment:
       # == Database Configuration ==

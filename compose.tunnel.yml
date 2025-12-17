@@ -14,7 +14,7 @@ services:
 
   # This service runs the Cloudflare Tunnel client.
   cloudflare-tunnel:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2025.1.1
     restart: unless-stopped
     # The command starts the tunnel using a token from the .env file.
     # This token links the container to a specific tunnel in your Cloudflare account.

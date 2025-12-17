@@ -1,5 +1,5 @@
 # Use the official image as base
-FROM n8nio/runners:latest
+FROM n8nio/runners:2.1.0
 
 # Switch to root to install packages
 USER root
