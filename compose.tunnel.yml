@@ -20,5 +20,6 @@ services:
     # This token links the container to a specific tunnel in your Cloudflare account.
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
     depends_on:
-      # Ensures the tunnel only starts after the n8n service is running.
-      - n8n
+      # Ensures the tunnel only starts after the n8n service is healthy.
+      n8n:
+        condition: service_healthy
