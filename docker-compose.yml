@@ -1,73 +1,99 @@
-version: "3.8"
+# This is the base Docker Compose file for local development.
+# It starts the n8n, postgres, and task runner services.
+# To run this file, use: docker-compose up -d
 
 services:
   # Service for the PostgreSQL database.
   postgresdb:
-    image: postgres:17 # Specifies the official PostgreSQL version 17 image.
-    restart: unless-stopped # Ensures the service restarts automatically unless manually stopped.
+    image: postgres:18
+    restart: unless-stopped
     environment:
       # Database credentials and name sourced from the .env file.
-      # These are used by PostgreSQL to initialize the database on first run.
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      # Persists database data across container restarts.
-      - pgdata:/var/lib/postgresql/data
+      # Persists database data on the host machine.
+      # For postgres:18, the data is stored in the root of the volume.
+      - ./pgdata:/var/lib/postgresql
     healthcheck:
-      # Checks if the database is ready to accept connections.
+      # Ensures that other services only start after the database is ready.
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s # How often to run the check.
-      timeout: 5s # How long to wait for a response.
-      retries: 5 # How many times to retry before marking as unhealthy.
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Service for the n8n workflow automation tool.
+  # Service for the main n8n application.
   n8n:
-    image: n8nio/n8n:latest # Specifies the latest official n8n image.
-    restart: unless-stopped # Ensures the service restarts automatically.
+    image: n8nio/n8n:latest
+    restart: unless-stopped
     environment:
-      # Configuration for connecting n8n to the PostgreSQL database.
+      # == Database Configuration ==
+      # Tells n8n to use a PostgreSQL database.
       DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgresdb # The hostname of the database service.
+      # The following variables connect n8n to the postgresdb service.
+      DB_POSTGRESDB_HOST: postgresdb
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
       DB_POSTGRESDB_USER: ${POSTGRES_USER}
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
 
-      # Sets the timezone for the n8n application and the container.
+      # == Timezone Settings ==
+      # Sets the timezone for the n8n application and container.
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
       TZ: ${TZ}
 
-      # Security and runner settings for n8n.
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+      # == Task Runner Configuration ==
+      # Enables external runners for executing workflows.
       N8N_RUNNERS_ENABLED: true
+      N8N_RUNNERS_MODE: external
+      # Listens on all network interfaces inside the container for runner connections.
+      N8N_RUNNERS_BROKER_LISTEN_ADDRESS: "0.0.0.0"
+      # Shared secret to authenticate runners. Must match the runner's token.
+      N8N_RUNNERS_AUTH_TOKEN: ${N8N_RUNNERS_AUTH_TOKEN}
 
-      # Public-facing URL configuration for n8n, used for webhooks and the editor.
+      # == Webhook & Editor URL Configuration ==
+      # These variables define how n8n is accessed externally.
+      # For local mode, these should point to http://localhost:5678.
+      # For tunnel mode, these should point to your public Cloudflare URL.
       N8N_HOST: ${N8N_HOST}
       N8N_PROTOCOL: https
       N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL}
       WEBHOOK_URL: ${WEBHOOK_URL}
-      # The following variable is necessary when n8n is running behind a reverse proxy.
-      # It specifies the number of hops, which is the number of reverse proxies the request
-      # goes through before reaching n8n.
+      # Specifies the number of reverse proxies between the user and n8n.
+      # '1' is correct for the Cloudflare Tunnel setup.
       N8N_PROXY_HOPS: ${N8N_PROXY_HOPS:-1}
+    ports:
+      # Exposes n8n on port 5678 for local access.
+      # This is disabled when using the tunnel override file.
+      - "5678:5678"
     depends_on:
+      # Ensures n8n only starts after the database is healthy.
       postgresdb:
-        # Ensures that n8n only starts after the postgresdb service is healthy.
         condition: service_healthy
     volumes:
       # Persists n8n's user data, workflows, and credentials.
-      - n8ndata:/home/node/.n8n
+      - ./n8ndata:/home/node/.n8n
 
-  # Service for creating a secure tunnel to the n8n service using Cloudflare Tunnel.
-  cloudflare-tunnel:
-    image: cloudflare/cloudflared:latest # Specifies the official Cloudflare Tunnel image.
-    restart: unless-stopped # Ensures the service restarts automatically.
-    profiles: ["tunnel"]
-    # The command to run the tunnel. The token is provided from the .env file.
-    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
-
-# Defines the named volumes used for data persistence.
-volumes:
-  pgdata:
-  n8ndata:
+  # Service for the external task runner.
+  n8n-task-runners:
+    # This builds a custom runner image using the specified Dockerfile.
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n-runner
+    image: custom-n8n-runner:latest
+    restart: unless-stopped
+    environment:
+      # == Runner Connection Settings ==
+      # The address of the main n8n instance's broker.
+      N8N_RUNNERS_TASK_BROKER_URI: http://n8n:5679
+      # Shared secret to authenticate with the main n8n instance.
+      N8N_RUNNERS_AUTH_TOKEN: ${N8N_RUNNERS_AUTH_TOKEN}
+      N8N_RUNNERS_LAUNCHER_LOG_LEVEL: info
+    volumes:
+      # Mounts the runner configuration file, which defines the types of runners
+      # (e.g., javascript, python) and their allowed packages.
+      - ./n8n-task-runners.json:/etc/n8n-task-runners.json
+    depends_on:
+      # Ensures the runner only starts after the main n8n instance is running.
+      - n8n

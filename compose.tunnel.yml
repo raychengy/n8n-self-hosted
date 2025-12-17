@@ -1,0 +1,24 @@
+# This is an override file for running n8n in "tunnel mode".
+# It disables local port access for n8n and starts the Cloudflare Tunnel service
+# to expose n8n securely to the internet.
+# To use this file, run:
+# docker-compose -f docker-compose.yml -f compose.tunnel.yml up -d
+
+services:
+  n8n:
+    # This overrides the 'n8n' service from the base docker-compose.yml file.
+    # By defining an empty 'ports' list, we remove the port mapping that was
+    # defined in the base file. This prevents port conflicts and ensures all
+    # traffic goes through the secure tunnel.
+    ports: []
+
+  # This service runs the Cloudflare Tunnel client.
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # The command starts the tunnel using a token from the .env file.
+    # This token links the container to a specific tunnel in your Cloudflare account.
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      # Ensures the tunnel only starts after the n8n service is running.
+      - n8n
