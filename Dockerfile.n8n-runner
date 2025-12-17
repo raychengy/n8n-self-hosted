@@ -1,0 +1,21 @@
+# Use the official image as base
+FROM n8nio/runners:latest
+
+# Switch to root to install packages
+USER root
+
+# Install Node.js dependencies
+# We use 'pnpm add' inside the javascript runner directory
+RUN cd /opt/runners/task-runner-javascript && \
+    pnpm add moment uuid
+
+# Install Python dependencies
+# We use 'pip' here (safe fallback if 'uv' is not in PATH, though n8n often uses uv now)
+RUN cd /opt/runners/task-runner-python && \
+    pip install numpy pandas
+
+# Copy your config file into the image
+COPY n8n-task-runners.json /etc/n8n-task-runners.json
+
+# Switch back to the non-root user for security
+USER runner
