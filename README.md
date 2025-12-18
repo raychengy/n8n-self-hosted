@@ -1,6 +1,6 @@
 # n8n with PostgreSQL and Cloudflare Tunnel
 
-This project provides a `docker-compose` setup to run a local instance of [n8n](https://n8n.io/), a free and open-source workflow automation tool, with a PostgreSQL database for data persistence. The n8n instance is securely exposed to the internet using [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/).
+This project provides a `docker compose` setup to run a local instance of [n8n](https://n8n.io/), a free and open-source workflow automation tool, with a PostgreSQL database for data persistence. The n8n instance is securely exposed to the internet using [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/).
 
 This setup is great for deploying on a Network Attached Storage (NAS) device that supports Docker, allowing you to run a self-hosted, publicly accessible n8n instance from your home or office network.
 
@@ -58,9 +58,21 @@ Once your tunnel is created, you need to configure a public hostname that routes
     *   **Domain:** Select your domain.
     *   **Service:**
         *   **Type:** `HTTP`
-        *   **URL:** `n8n:5678` (This points to the n8n service defined in the `docker-compose.yml` file, at its internal port).
+        *   **URL:** `n8n:5678` (This points to the n8n service defined in the `docker compose.yml` file, at its internal port).
 
 This will create a public URL (e.g., `https://n8n.your-domain.com`) that tunnels traffic to your local n8n container.
+
+### 3. A Note on File Permissions
+
+If you choose to customize this setup to use file-based secrets instead of environment variables, you must ensure the file permissions are correctly set on the host machine. Docker containers run under a specific user ID, and if that user doesn't have permission to read the secret files, the services will fail to start.
+
+For example, the n8n container runs as user ID `1000`. To grant the container read access to your secret files (e.g., `postgres_password.txt`), you can change the owner of the files:
+
+```bash
+sudo chown 1000:1000 postgres_password.txt
+```
+
+This is especially important when running on systems like a NAS where default file permissions may be more restrictive.
 
 ## Environment Variables
 
@@ -164,7 +176,7 @@ Add the package name to the `N8N_RUNNERS_EXTERNAL_ALLOW` list for the `python` r
 After making these changes, you must rebuild your custom runner image for them to take effect. Run the following command:
 
 ```bash
-docker-compose build n8n-task-runners
+docker compose build n8n-task-runners
 ```
 
 After the build is complete, you can restart your services as usual.
@@ -178,9 +190,9 @@ This setup is configured to run in two distinct modes using a Docker Compose ove
 This mode is for local development and testing. It runs n8n and its database, making the n8n UI accessible on your host machine. The Cloudflare Tunnel is **not** used.
 
 **To Start:**
-Run the standard `docker-compose` command. n8n will be available at `http://localhost:5678`.
+Run the standard `docker compose` command. n8n will be available at `http://localhost:5678`.
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 > **Note:** For this mode, ensure the `N8N_...` URL variables in your `.env` file are set to `http://localhost:5678`.
 
@@ -192,7 +204,7 @@ This mode is for production or any scenario where you need n8n to be reachable f
 **To Start:**
 You must explicitly include the override file in your command:
 ```bash
-docker-compose -f docker-compose.yml -f compose.tunnel.yml up -d
+docker compose -f docker compose.yml -f compose.tunnel.yml up -d
 ```
 > **Note:** For this mode, ensure the `N8N_...` URL variables in your `.env` file are set to your public Cloudflare domain (e.g., `https://n8n.your-domain.com`).
 
@@ -202,11 +214,11 @@ To stop all services, use the corresponding command for the mode you are running
 
 *   **If in Local Mode:**
     ```bash
-    docker-compose down
+    docker compose down
     ```
 *   **If in Tunnel Mode:**
     ```bash
-    docker-compose -f docker-compose.yml -f compose.tunnel.yml down
+    docker compose -f docker compose.yml -f compose.tunnel.yml down
     ```
 
 ## License
