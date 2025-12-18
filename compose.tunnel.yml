@@ -22,4 +22,4 @@ services:
     depends_on:
       # Ensures the tunnel only starts after the n8n service is healthy.
       n8n:
-        condition: service_healthy
+        condition: service_started
