@@ -14,8 +14,5 @@ RUN cd /opt/runners/task-runner-javascript && \
 RUN cd /opt/runners/task-runner-python && \
     pip install numpy pandas
 
-# Copy your config file into the image
-COPY n8n-task-runners.json /etc/n8n-task-runners.json
-
 # Switch back to the non-root user for security
 USER runner
