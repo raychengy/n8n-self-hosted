@@ -15,7 +15,7 @@ services:
     volumes:
       # Persists database data on the host machine.
       # For postgres:18, the data is stored in the root of the volume.
-      - ./pgdata:/var/lib/postgresql
+      - ${N8N_POSTGRES_DATA_PATH:-./pgdata}:/var/lib/postgresql
     healthcheck:
       # Ensures that other services only start after the database is ready.
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -74,13 +74,13 @@ services:
         condition: service_healthy
     volumes:
       # Persists n8n's user data, workflows, and credentials.
-      - ./n8ndata:/home/node/.n8n
+      - ${N8N_DATA_PATH:-./n8ndata}:/home/node/.n8n
 
   # Service for the external task runner.
   n8n-task-runners:
     # This builds a custom runner image using the specified Dockerfile.
     build:
-      context: .
+      context: ${N8N_PROJECT_PATH:-.}
       dockerfile: Dockerfile.n8n-runner
     image: custom-n8n-runner:latest
     restart: unless-stopped
@@ -94,7 +94,7 @@ services:
     volumes:
       # Mounts the runner configuration file, which defines the types of runners
       # (e.g., javascript, python) and their allowed packages.
-      - ./n8n-task-runners.json:/etc/n8n-task-runners.json
+      - ${N8N_RUNNERS_CONFIG_PATH:-./n8n-task-runners.json}:/etc/n8n-task-runners.json
     depends_on:
       # Ensures the runner only starts after the main n8n service has started.
       n8n:
