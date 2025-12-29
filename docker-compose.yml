@@ -78,11 +78,7 @@ services:
 
   # Service for the external task runner.
   n8n-task-runners:
-    # This builds a custom runner image using the specified Dockerfile.
-    build:
-      context: ${N8N_PROJECT_PATH:-.}
-      dockerfile: Dockerfile.n8n-runner
-    image: custom-n8n-runner:latest
+    image: raychengy/n8n-runner:latest
     restart: unless-stopped
     environment:
       # == Runner Connection Settings ==
