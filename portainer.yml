@@ -1,3 +1,0 @@
-include:
-  - docker-compose.yml
-  - compose.tunnel.yml
