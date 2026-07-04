@@ -7,6 +7,7 @@ USER root
 # Install Node.js dependencies
 # We use 'pnpm add' inside the javascript runner directory
 RUN cd /opt/runners/task-runner-javascript && \
+    pnpm install && \
     pnpm add moment uuid
 
 # Install Python dependencies
